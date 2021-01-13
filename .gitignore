@@ -61,3 +61,5 @@ crashlytics-build.properties
 NeoRTS/Library/
 NeoRTS/Builds/
 NeoRTS/Assets/TextMesh Pro/Examples & Extras/Scenes/
+NeoRTS/Packages/
+NeoRTS/Temp/

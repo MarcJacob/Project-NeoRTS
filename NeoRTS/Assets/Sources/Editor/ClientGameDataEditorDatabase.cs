@@ -10,6 +10,10 @@ namespace NeoRTS
 {
     namespace EditorTools
     {
+
+        namespace GoogleDriveExtension
+        {
+        }
         public static class ClientGameDataEditorDatabase<T> where T : UnityEngine.Object
         {
             static private T[] m_allElements;

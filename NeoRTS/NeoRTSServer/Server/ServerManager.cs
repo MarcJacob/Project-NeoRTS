@@ -24,7 +24,7 @@ namespace NeoRTS
 
             private int ticksPerSecond = 60;
             private float m_gameStateUpdateCooldown = 0.1f;
-            private const int PLAYERS_PER_MATCH = 1;
+            private const int PLAYERS_PER_MATCH = 2;
 
             private ChannelCollection m_communicationChannels;
             private MessageDispatcher m_messageDispatcher;
