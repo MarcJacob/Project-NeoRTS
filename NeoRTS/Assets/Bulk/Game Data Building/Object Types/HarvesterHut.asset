@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 230e87f1ca082ff4492e2b72d93fcc15, type: 3}
+  m_Name: HarvesterHut
+  m_EditorClassIdentifier: 
+  displayName: Harvester Hut
+  archetype: {fileID: 11400000, guid: b4539af5670ec174099718ff90f43fa1, type: 2}
+  actor: {fileID: 3366714460559849199, guid: 592f7f1053d8a594da71adf61ed4ad0c, type: 3}
+  pawn: {fileID: 5058428272425155764, guid: 4a963971eeff04b49ada50f6f5264307, type: 3}
+  dataTypeOverrideDefGroup: {fileID: 11400000, guid: 2b56f4dbc8c52d747adc53c8e132fd44, type: 2}

@@ -1,0 +1,2 @@
+X:\Unity Projects\NeoRTS\obj\Debug\Assembly-CSharp.csprojAssemblyReference.cache
+X:\Unity Projects\NeoRTS\obj\Debug\Assembly-CSharp.csproj.CoreCompileInputs.cache

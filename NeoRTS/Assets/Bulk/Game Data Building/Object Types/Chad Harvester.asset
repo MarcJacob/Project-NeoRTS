@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 230e87f1ca082ff4492e2b72d93fcc15, type: 3}
+  m_Name: Chad Harvester
+  m_EditorClassIdentifier: 
+  displayName: Chad Harvester
+  archetype: {fileID: 11400000, guid: 3e20ffb946f61cb40b7351c3f37f8c5a, type: 2}
+  actor: {fileID: -4765383365325213809, guid: be8a7e9d74291a747aa3a4f78bf78c2c, type: 3}
+  pawn: {fileID: 2389668569937579011, guid: 9770bc29b76cd284495e0bd8b31e4a1d, type: 3}
+  dataTypeOverrideDefGroup: {fileID: 11400000, guid: 41711f5421a6bf54da82f2139dd39cb0, type: 2}

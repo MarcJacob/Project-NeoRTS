@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c5ec919fad5a9142b8180362ca743c4, type: 3}
+  m_Name: DB_SimplePawnComponent
+  m_EditorClassIdentifier: 
+  rows:
+  - id: 0
+  - id: 1
+  references:
+    version: 1
+    00000000:
+      type: {class: GameDataDatabaseObject/GameDataDatabaseObjectRow, ns: NeoRTS.Client.GameData, asm: Assembly-CSharp}
+      data:
+        ID: 0
+        Element: {fileID: 5058428272425155764, guid: 4a963971eeff04b49ada50f6f5264307, type: 3}
+    00000001:
+      type: {class: GameDataDatabaseObject/GameDataDatabaseObjectRow, ns: NeoRTS.Client.GameData, asm: Assembly-CSharp}
+      data:
+        ID: 1
+        Element: {fileID: 2389668569937579011, guid: 9770bc29b76cd284495e0bd8b31e4a1d, type: 3}

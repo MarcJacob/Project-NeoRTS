@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Harvester_Controller
+  m_Controller: {fileID: 9100000, guid: af0a9b82fcf95dc4abb99401b5b877b7, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 1166269151006748419, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+    m_OverrideClip: {fileID: 1166269151006748419, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+  - m_OriginalClip: {fileID: 8130596420736351418, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+    m_OverrideClip: {fileID: 8130596420736351418, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+  - m_OriginalClip: {fileID: 3941608827215231139, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+    m_OverrideClip: {fileID: 3941608827215231139, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+  - m_OriginalClip: {fileID: -192585019796578174, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}
+    m_OverrideClip: {fileID: -192585019796578174, guid: a49421bdf3001814b83258c4fe1356e5, type: 3}

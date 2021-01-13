@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9786d6dbea70bba458c16ff27a429c36, type: 3}
+  m_Name: ArchetypeDefGroup_Unit
+  m_EditorClassIdentifier: 
+  serializedData:
+    dataDefList:
+    - dataTypeName: OBJECT_DATA_HEALTH
+      fields:
+      - fieldName: HP
+        fieldDefaultValue: 100
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_GROUND_COLLISION
+      fields:
+      - fieldName: collisionSize
+        fieldDefaultValue: 0.5
+      - fieldName: allowPushback
+        fieldDefaultValue: True
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_MOVEMENT
+      fields: []
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_OWNER
+      fields:
+      - fieldName: ownerID
+        fieldDefaultValue: 0
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_TRANSFORM
+      fields: []
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_WEAPON
+      fields:
+      - fieldName: currentCooldown
+        fieldDefaultValue: 0
+      - fieldName: currentWindup
+        fieldDefaultValue: 0
+      - fieldName: usingWeapon
+        fieldDefaultValue: False
+      - fieldName: weaponRange
+        fieldDefaultValue: 10
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_AI
+      fields: []
+      gameDataRefFields: []
+    - dataTypeName: OBJECT_DATA_CELL_COORDS
+      fields:
+      - fieldName: placed
+        fieldDefaultValue: False
+      gameDataRefFields: []

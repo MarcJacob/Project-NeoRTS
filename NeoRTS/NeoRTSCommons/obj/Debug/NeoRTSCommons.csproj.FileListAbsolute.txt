@@ -1,0 +1,9 @@
+X:\Unity Projects\NeoRTS\NeoRTSCommons\obj\Debug\NeoRTSCommons.csprojAssemblyReference.cache
+X:\Unity Projects\NeoRTS\NeoRTSCommons\obj\Debug\NeoRTSCommons.csproj.CoreCompileInputs.cache
+X:\Unity Projects\NeoRTS\NeoRTSCommons\bin\Debug\NeoRTSCommons.dll
+X:\Unity Projects\NeoRTS\NeoRTSCommons\bin\Debug\UnityEngine.dll
+X:\Unity Projects\NeoRTS\NeoRTSCommons\bin\Debug\UnityEngine.xml
+X:\Unity Projects\NeoRTS\NeoRTSCommons\obj\Debug\NeoRTSCommons.csproj.CopyComplete
+X:\Unity Projects\NeoRTS\NeoRTSCommons\obj\Debug\NeoRTSCommons.dll
+X:\Unity Projects\NeoRTS\NeoRTSCommons\bin\Debug\NeoRTSCommons.pdb
+X:\Unity Projects\NeoRTS\NeoRTSCommons\obj\Debug\NeoRTSCommons.pdb
