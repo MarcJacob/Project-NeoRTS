@@ -188,4 +188,88 @@ This explains why there is a "Self" *Channel*. The third *Channel*, "Local Match
 
 And that's for now all there is to say about synchronization in this framework. It's very crude as yet, but it already works well enough for primitive testing and has the advantage of being *extremely* flexible : the *ObjectDataChangeEvent* system can work with **any** type of *Object Data*. In the "Post mortem" section I will write briefly about what I would do to improve it.
 
+#### Feature examples
+
+Every feature of a *Match*'s simulation is built on *Managers*, *Workers* and presumably some *Object data*. Let's go through some of the currently implemented ones.
+
+##### Unit movement
+
+A *Unit* is understood to be an *Object* that's able to move, interact with other *Objects* in some way, be controlled by a player or AI, and be destroyed. In this case we are interested in *Movement*, how is it done ?
+
+There are four elements at play : the **AI** data component, the **Movement** data component, the **Movement Updater** *Worker* and the **Order Movement Processor** *Worker*.
+
+- AI data contains an *Object*'s current Order and data associated with that Order. It thus also *enables* that Object to be affected by AI-related *Workers*.
+- Movement data contains movement stats, and the *Object*'s current destination (not necessarily where the AI *wants* to go, but where it's heading to *right now*, possibly as part of a broader pathfinding algorithm)
+- The Movement Updater *Worker* simply iterates over every *Object* that owns a Movement data component and **a Transform data component**. It checks the related destination data, stats, and moves the *Object*'s Transform data component's position attribute accordingly.
+- The Order Movement Processor iterates over *Objects* that own an AI data component and a Movement data component. As its name implies it updates the Movement component depending on where the AI "wants" to go (towards an ordered position, towards a targeted enemy...)
+
+While the data components get detected automatically, the *Workers* have to be added to the *Match* construction code (which is part of a broader flaw of the framework I'll touch on later). Note that the *Workers* in this case do not have to be separate - you could totally make a single one that does both the AI -> Movement data work, and the Movement data -> Position / Transform change work. However, the more granular your *Workers* are, the easier it is to reuse them for other features, and the easier it will be to **parallelize** simply because each *Worker* will have fewer dependencies.
+
+#### Target search & Collisions (IE querying Objects in area)
+
+In an RTS, a LOT of what happens is based on how far apart things are from eachother : aggro range, cast range, attack range, vision range, collision radius...
+
+From the start I knew I would eventually have to come up with the best system I could design in my junior mind to reduce the massive performance cost of... things interacting with other things depending on distance. If you've been tempted to code AI battles in your Unity scenes before, you might not know that optimizing search by distance is a **big deal**.
+
+The solution(s) is a type of solution called "Spatial partitioning", as in making the relevant data quickly accessible through a world position. This usually involves "physically" (in memory) placing / pointing to your data in a way that mimics the actual placement of your data in the world.
+
+A very simple, yet very effective implementation of this is what I call a "Cell system" : your map gets divided in "Cells" on the X / Z 2D plane, sometimes all of them square (thus forming a grid) or sometimes shaped differently (to follow the map's layout better for example, especially if you want to use the same Cell System for pathfinding). The principle is simple : through some algorithm, you keep track of where things are, and place them in memory that is quick to access from a given cell depending on their position. A "naive" implementation (when performance isn't critical) is to assign a container of *Object* / *Entity* / *Whatever really* references to the cell, preferably of a type that has a dynamically resizeable *length*. With that done, you've already massively optimized performances of target search algorithm (among many others) because now you can very easily cull distance comparisons against *Objects* that couldn't possibly be in range to be affected (for example, when looking for the closest enemy, you can stop searching Cells *further away* than a cell where you've found a *potential target*, since they couldn't possibly be closer).
+
+My solution is similar : the same concept of *Cells* is present, except the way they "point" to what's inside of them works differently. See, for the same necessity of *data locality* that I had to deal with when building my *Object Memory* system, I couldn't go with assigning a dynamically resizeable container for each cell, as that would spread the actual data out in memory in an unnacceptable way (at least to my "*I need to optimize this even if it was never going to be a problem to begin with*" mind).
+
+The first working implementation simply gave each cell a fixed size array of *uint* data, which was meant to contain the IDs of *Objects* located within this cell. This had two problems :
+- The maximum amount of *Objects* a *Cell* could hold was **fixed**. This meant that if ever too many *Objects* entered the same *Cell*, the whole simulation would crash. Guess what kept happening when I was playing around triggering big battles on the map ?
+- It was extremely memory inefficient, to an unacceptable degree, even on *modern hardware*. Imagine a map with 50 x 50 cells... that's 2500. Times 10. 25 000 "spots" to hold *Object IDs* in (taking a total of 100 kB...) when *the maximum amount of Objects that could possibly even exist was capped at 1000*.
+
+As such I ended up scrapping the frankly lazy idea of constant memory for each *Cell*, and instead came up with this :
+
+*We can only have a fixed maximum amount of Objects at once over the entire map.* What if a memory pool big enough to hold as many IDs was allocated and then *shared* by the *Cells* ? It would theoretically work since if an *Object* enters a *Cell*, then either it was spawned, meaning we have memory left, or it *left another Cell*, freeing up the memory we need. Moreover, it being a single sequential block of memory means that it will works *wonders* with the CPU cache. Especially when iterating over that memory, looking for a target or affecting things in range of something else.
+
+**Now, of course, actually implementing this would prove very difficult.**
+
+Here is how it works : picture each *Cell* no longer as its own construct with its own local memory for holding *Object IDs* in, but rather *property owners*. *Cells* can *Own* a part of the *Common memory* or *ID slots memory*. They are essentially fancy pointers that don't actually use pointers (at least not as class fields). They contain three numbers :
+
+- The ID of the first slot they *potentially* own (important detail : *Cells* can end up owning **no memory** / **no slots** at all)
+- The amount of *slots* they own, and are taken by an actual *Object* (as opposed to *free slots* which are always of value *uint.MaxValue*)
+- The amount of *slots* they own in total. The amount of *Free slots* can thus be calculated easily.
+
+Finally, *Cells* follow one rule in how they are laid out in this common memory. Their *right* and *left* neighbours must correspond to the *next* and *previous* neighbouring *Cell* in the grid, IE X+1 and X-1 respectively (with the exception of edge *Cells* that have a neighbour inside another row). Thus a *Cell* will always be "*placed*" in the common memory *right after* its previous neighbouring *Cell* and *right before* its next neighbouring *Cell*. As an example, picture a 2*2 *Cell* grid with a total of 12 slots to share. If the *Objects* are perfectly spread among the *Cells*, you'd get this ('|' represents the separation between two ID slots in memory):
+
+(Cell 0 start) 0 | 1 | 2 | (Cell 1 start) 3 | 4 | 5 | (Cell 2 start) 6 | 7 | 8 | (Cell 3 start) 9 | 10 | 11 
+
+Makes sense right ? Here the actual IDs don't matter, you could place them in any order. All that's important to notice is that the memory is **filled** because none of the IDs in memory are equal to the maximum value a *uint* can hold.
+
+Now, what happens if every object moves to Cell 1 ? This is how the memory what the memory would look like:
+
+(Cell 0 start) (Cell 1 start) 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | (Cell 2 start) (Cell 3 start)
+
+Remember that each *Cell* keeps track of how many slots it *owns*, so there's no risk of mistakenly thinking *Cell 0* owns anything. You might also notice that it is possible for *Cells* to be placed in the same location, including after the last actual slot.
+
+One last example : half of the *Objects* move to Cell 0 and half of the others move to Cell 3. If you've understood everything so far you should be able to picture the memory distribution. If not, here it is :
+
+(Cell 0 start) 0 | 1 | 2 | 3 | 4 | 5 | (Cell 1 start) (Cell 2 start) (Cell 3 start) 6 | 7 | 8 | 9 | 10 | 11
+
+I hope it's starting to become clear.
+
+I won't go into detail as to how the automatic redistribution of memory is implemented. If you want to (try to) find out, you can visit the code. It's all in the CellSystem file IIRC. All there is to understand, in principle, is that the sum of all "movements" in a *Tick* are resolved by a dedicated *Worker* that runs before any other. From these *movements*, the new amount of slots each *Cell* **needs** is easy to determine, and if ever a *Cell* ends up not owning enough memory, it is able to "*ask*" for more from its left and right neighbours, which might trigger these neighbours to do the same (hence propagating the request for memory, sometimes actually finding some *hundreds* of cell to the right or left. Thankfully that part isn't performance critical, and by nature is difficult to overload for long).
+
+Finally, for checking *whether* Objects have moved from one tile to another, I have not yet felt the need to do anything smarter than using a *Worker* (the same as the one generating the *movements*) to iterate over every single object in possession of a *Cell position data* and a *Transform data* component and checking their current position compared to their current *Cell position*. It could be more clever in not checking *Objects* that can't move for example, but unless there are tons of *Objects* that keep moving around I really don't see this *Worker* ever being overloaded, and it'd be **very easy** to parallelize as it runs *first* and has very few dependencies.
+
+**With that implemented, it was very easy to implement target search : for every *Object* with an AI, an owner (IE a "side"), and a weapon (IE a reason to target things...), AND a Cell Position component, check their Cell's coordinates in the grid, and start a search algorithm that gradually looks inside further and further Cells until potential targets have been found, and only THEN run any actual distance comparisons.**
+
+Generally speaking, having access to this *Cell System* that automatically takes into account all *Objects* with the right components is a massive advantage in implementing any feature that cares about where things are... which is a LOT of features. With this system I managed to also keep it all "Cache-friendly" AND memory efficient, as now the size of that memory pool depends on how many *Objects* at once we want to be able to support, rather than the number of *Cells* there are.
+
+#### Spawning ~~units~~ Objects from some ~~buildings~~ * other Objects*
+
+To take a breather from complexity, an example of a very simple feature that I got working in very little time : automatically spawning *Objects* from other *Objects* at a certain frequency. As I haven't yet delved into *Game Data* and *Object types* / *Object Archetypes*, I can't go into implementation specifics. All you need to know is that an *Object type* is an number-identifiable (as in, *it has a global ID*) set of *Data components* an object should spawn with, along with default values for it, aswell as common stats and characteristics you'd expect like a *Name*, and some more data that helps the *Client* identify which graphical assets to use for that *Object*.
+
+To implement this feature, all it took was two elements :
+
+- A data component I would call the *Periodic Spawner Data* component, containing the *spawn period*, the *current spawn cooldown* and the ID of the *Object type* we want to spawn
+- A worker to update these components and trigger the actual spawning
+
+As always, the data component was automatically detected. The worker only involved a small amount of code and references to the *Spawning Queue* (because *Workers* are not allowed a direct reference to the *Object Memory Manager* which handles the actual spawning, they are given access to a *Queue* which takes in "Requests" to spawn things if they need to, to which they can keep a reference exactly like *Object data*), the *Object data* for *Positions* (so that we know where to place spawned *Objects*) and the component we created.
+
+Our new *Worker* then simply implements the *Work* stage of the pipeline in order to iterate over every *Object* with the relevant components. Their *current spawn cooldown* gets updated, and if it's found to be below 0, then it gets reset back to the value of *spawn period* and a single spawning request for the relevant *Object type* is logged to the *Spawn request queue*. Not counting all the more abstract things I had to implement to get it to work, it must have taken me... 10 minutes of work ?
+
 \[TO BE CONTINUED\]
