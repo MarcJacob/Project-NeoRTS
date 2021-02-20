@@ -272,4 +272,97 @@ As always, the data component was automatically detected. The worker only involv
 
 Our new *Worker* then simply implements the *Work* stage of the pipeline in order to iterate over every *Object* with the relevant components. Their *current spawn cooldown* gets updated, and if it's found to be below 0, then it gets reset back to the value of *spawn period* and a single spawning request for the relevant *Object type* is logged to the *Spawn request queue*. Not counting all the more abstract things I had to implement to get it to work, it must have taken me... 10 minutes of work ?
 
-\[TO BE CONTINUED\]
+
+There is one more major element we have not gone to yet : *Game Data* elements (currently made up of *Object Types* and *Archetypes*). They are technically part of the *Commons* but a in-depth explanation will be provided in the *Editor Code* section of the next part.
+
+## Understanding the code base (part 3 : Client systems)
+
+The *Client* is the second biggest project in terms of code. It also contains the Editor code, used for creating and editing *Game Data*. Let's go through every major system.
+
+### Client States (Game flow)
+
+Very quickly in development, a need arose to split the Client management code (at the time mostly concentrated within *GameClient*) within multiple classes housing code for the set of data and behaviors needed when the *Client* is in a certain... *State*.
+
+A *Client State* doesn't pay taxes or swear homage but it does simplify the construction of the *Client* app in how and when different sub systems get initialized and (re)activated. They can handle any kind of behavior - *MESSAGE* based behaviors, UI interactions (through *UI Modules*), *Manager* interactions (States possess their own *Managers* on top of the *GameClient* singleton object itself also possessing his own. The difference being *GameClient* Managers are permanent, and *Client State* Managers only persist as long as the State itself does. Both can be accessed through the *GameClient*'s *GetManager* function), and sometimes debugging.
+
+### UI Modules
+
+Making a Game that turns out to be more of a Framework means that the UI is left in a very uncertain state. You might make a new element, and notice you need to reuse it in multiple places, have variants of it, or change it in depth without affecting the rest of the interface. With this in mind and the personal rule I have of *never* mixing *Representation* code with actual *Work code* (Frontend / Backend, or *View/Controller* design as you might call it), I came up with the *UI Module* system.
+
+A *UI Module* represents a single "unit" of interface. It might be a single element with special functionality you might reuse many times over on the same screen (Unit HP bars for example), or a more complex element that could be used only in a single place, or a mix of both.
+
+Each *Module* exists in the project assets as a Prefab object. The parent object (usually a *Canvas*) must contain a Unity *Component/Monobehaviour* script of a type that derives from *UIModule*. It must also be placed within the *Resources/UI/Modules/* folder.
+
+Beyond that, the exact code a *Module* contains is extremely flexible, but the point is usually to build a class with the ability to call events things can register to. That way, they can be used productively by whatever backend code (usually a *Client State*) created them. *UIModule* such as it is is a completely empty *abstract* class.
+
+To make use of *UIModules*, a special *GameClient*-wide *Manager* called *UIManager* takes care of automatically loading every single valid *Module* within the correct folder into memory and making them easily accessible through type, name, or both depending on what type / variant of a type we want to use. Then, UI users can simply call one of the overloads of *GetUIModule* which searches for and instantiates the appropriate *Module* if it exists. It then returns a reference to it. 
+For now, whatever calls this is entrusted with *caching* the reference to the *Module* they've just created and *Destroying* it. The initial idea though was for that to somehow be done automatically, depending on a "lifetime" parameter passed when getting the *Module* (it would work with the fact most *Modules* get destroyed when the current *Client State* ends or when a specific *Pawn* dies. More on *Pawns* later). That way, given that most *Modules* can only be interacted with by registering to events, users of these modules would not even need to keep a cached reference to them. Get the module -> Register for events -> Forget about it would be the go-to for most cases.
+
+Note that *all* instantiated *UIModules* get parented to the global *\[UI ROOT\]* object in order to not clog up the hierarchy (especially in the case of *Pawn UI Modules*, which are not parented to the same object. More on those in the *Pawn System* section).
+
+### Local Match
+
+As we make use of the *Lockstep* system, a full *simulation* of a *Match* is ran on the *Client* no matter if we're playing online or offline. The *LocalMatchManager* is a *Manager* whose role is to wrap the *Client*'s unique *Match* object, initialize it, update it, transmit messages...
+
+That *Manager* exists only during the *PlayingState*. If playing Singleplayer, the state creates the *Match Start Data* and transmits it to the manager to initialize the *Match* with and start playing. If playing Multiplayer, the *Match* and its Manager are primed to receive that data from a *Message* instead, and until that point are put in a waiting state. Once overhauled the *LocalMatchManager* will probably be created and primed for either mode of play by a *LoadingState* with the *PlayingState* only starting once the *Match* actually has its data and is starting its update cycle.
+
+### Pawn System
+
+Another *Manager* belonging to the *PlayingState* is the *PawnManager*.
+
+Its role is to manage the entirety of the *Pawn* system. A bit of context : on the client-side, we have a *Match* system whose code and functionality is entirely located with the *Commons*, meaning it can not contain any code meant for clients to understand what's happening currently, but only the underlying data management.
+
+A specific system on the *Client* was needed to be able to "Watch" the local *Match* object and *represent* the current game state to the best of its abilities, mostly the current state of *Objects*. *Pawns* do just that.
+
+A *Pawn* is strictly speaking the "Unity side", GameObject-based display of *Objects*. Depending on its type, it *watches* specific data related to an *Object* it is responsible for *tracking*. All *Pawns* watch their *Object*'s position and update their linked *Pawn UI Modules*. However all instantiated *Pawns* have to be from a derived type, with more specific behavior.
+
+All *Pawn Types* exist as a prefab within the project assets which possesses the associated code on its root object, and the default *Actor* for that *Pawn Type*, something I won't get into in great detail (*Actors* are basically wrappers for graphical content that can be assigned to a *Pawn* and receive string based events from them). The *ObjectPawnManager* automatically loads every *Pawn Type* and *Actor* the first time an *ObjectPawnManager* is instantiated. From there, it will watch the local *Match*'s memory and react to new *Objects* being spawned, determine which *Pawn Type* and *Actor* to use (something it does through the spawned *Object*'s *Object  type*) and finally give the newly instantiated *Pawn* a chance to start watching data by passing it the local *Match*'s memory manager through the *LinkToGameData* function.
+
+#### Pawn UI Modules
+
+In order to be able to display information about a *Pawn*'s tracked *Object* using UI elements, the *UI Module* system was adapted to be usable on the *Pawn* level. Very simply, *UI Modules* deriving from the type *PawnUIModuleComponent* are able to be used by *Pawns*. These special *modules* will update their position on screen automatically, staying at a certain (parameterizable) offset from their target *Pawn*. They are parented to a specific object, itself located below the global *UI Root*. They are, finally, automatically discarded when the associated *Pawn* gets destroyed.
+
+#### Current Pawn types
+
+Currently, only a single *Pawn Type* exists that actually significantly expand on the behavior and tracked data of the base class : *Unit Pawns*.
+
+A *Unit Pawn* makes use of a single *Pawn UI Module* a *health bar*. It simply makes sure to update its current value (from 0 to 1) depending on the associated *Object*'s health and maximum health.
+
+It tracks a lot more data than the base *Pawn* type does : the *Object*'s current AI data, health data, movement data and weapon data so that it might play the proper animations when a unit moves, attacks, takes damage, dies... 
+
+Another *Pawn type* exists that does not add any functionality from the base class, used for objects which do not feature any animations, and do not need to display any information beyond simply being at the right position and having the right model.
+
+### Editor code & Game Data
+
+In multiple places in this document you've seen mention of the *Game Data* layer which mostly exists within the *Commons*, as it is used mostly by the *Match* code. Nevertheless, I decided to not speak about it in detail until reaching this part, to put it in context with the Editor code used to create and manipulate this data, aswell as export it to a format both the *Server* and *Client* apps can read.
+
+*Game Data*, rather confusingly I admit, only designates data that *links* together the different resources (data components, pawn types, actors...) the game is shipped with. This is what allows us to bring order to our codebase and resources to make it into an actual RTS game with *Units*, *Buildings*, *Destructibles*, *Abilities*...
+
+It is generated with the help of *Scriptable Object* types in the *Client*'s project assets (under "Assets/Bulk/Game Data Building/") with specific editor code, and other assets like the *Pawn Type* and *Actor* prefabs.
+
+Currently, *Game Data* contains the following :
+
+- Object *Archetypes* that define a set of *Data Components* and *default values* for them
+- Object *Types* that define an *Archetype*, possible overrides to the *Archetype*'s component types and / or default values, a name, an *Actor* and a *Pawn Type*. The last two being defined through an ID that's meaningless on the Server side but allows *Clients* to construct the correct *Pawn* for a given *Object Type ID*.
+
+On the editor side, things are linked through references to one another and simple serialized data. Once the data gets exported from the *Game Data Window* (which you can find by opening the *Client* Unity project and going to the *Tools/Game Data/* menu), everything gets resolved to an ID based system and encoded in a custom made binary format called "gameDat". The exact way the format works can be found in the *Commons*, under the "Resources" folder.
+
+Given the files were exported and distributed appropriately, the *Client* and *Server* applications will detect and load them on startup, and you will then be able to spawn *Objects* using an *Object Type ID* rather than a full definition of the Object's *Data Components*. 
+
+### Example of a Client Gameplay system : Unit selection & ordering 
+
+The main gameplay element of RTS games is usually selecting your units and right clicking the place you want them to move to.
+
+It is implemented through the *RTSModeUnitControlManager* and the *SelectedPawnsContainer* and *UnitSelector* helper classes. Simply put, the manager makes use of the helper classes to determine at any one time which *Pawns* are currently selected by the Player. With that information, the manager is then able to generate a *DataChangeEvent* (remember those ?) whenever the player right clicks, "asking" to change every selected *Object*'s AI data to the "Move To" order type, and the clicked position as data. That event is then sent as a Message to whatever is currently running a *Authoritative Match* (a notion I decided not to expand on. Multiplayer = the *Server* is authoritative and every event requires its say so before being applied on any machine, Singleplayer = the *Client's Local match* is authoritative and receives the event through the *Self* channel) so that the event might be taken into account, and in the case of multiplayer, broadcast.
+
+## Understanding the code base (part 4 : Server systems & the initial net architecture)
+
+### The initial vision
+
+### Connections & ConnectedPlayersManager
+
+### Matchmaking & MatchesManager
+
+### Chat
+
+## Will I continue this project ? What would I do better if starting from scratch ?
