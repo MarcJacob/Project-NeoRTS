@@ -359,10 +359,60 @@ It is implemented through the *RTSModeUnitControlManager* and the *SelectedPawns
 
 ### The initial vision
 
+The *Neo-RTS Framework*'s vision is one of high scales, and that includes the number of potential players interacting as a community for your game. Thus the **net architecture** has to be **highly extendable**. This means that a overpopulation / underpopulation problem should be fixable by simply adding / removing server machines, and that the set of tasks servers have to collectively accomplish must be spread among different *types* of servers in a clever way.
+
+The initial vision for the framework worked as follow :
+
+-> Client app : one per player. Allows a player to log onto a *Master Server* and, temporarily, to a *Match Server* in order to play online. With a potential ability for *peer-to-peer* play aswell.
+-> *Master Server* : "Regional" servers which are more like *communication hubs* than actual *servers*. They each possess a (possibly mirrored) database containing player profile information, and their addresses are *ingrained* into the client apps. It is where players meet and start playing matches with one another through *matchmaking* or *custom games*, which triggers them to connect to a designated *Match Server* the *Master Server* knows about through an actively updated list of connected *Match Servers*.
+-> *Match Server* : Servers doing the bulk of the work required to run *Matches*. Players connected to that server are only connected as long as required for the *Match*. *Match Servers* need to be acknowledged by a *Master Server* by connecting to them.
+
+This is thus a pretty small architecture, but it seemed to me like the simplest possible one where whoever manages the game can easily scale the resources allocated for online play according to population. There might be a need for "helper servers" for the *Master Server*'s work if population gets really high (though I believe you could pretty easily handle thousands of players with a single one if it is well-multithreaded). 
+
+In its current state, the framework does not yet feature a *Master Server* / *Match Server* dichotomy, but a single *Server* app that handles both. Note that because of the *Manager* object design, it would be very easy to split it right now, hence why I did not rush that separation along. An initial separation could be done by running both server types on the same app and have them communicate through a *LocalAppCommunicationChannel* similarly to how the *Client* and *Server* would in the early stages of development.
+
+Let's go over the set of services the *Server* currently provides or could provide fully with minimal development time :
+
 ### Connections & ConnectedPlayersManager
+
+If you have not read about *Communication Channels* objects yet, I encourage you to do it now. Long story short, a *Communication Channel* object is a wrapper for a certain *Communication protocol* with a specific *interlocutor*. On the Server, a list of these objects is maintained and dynamically expanded / reassigned everytime *something* connects to the server (which it picks up on through a specific *Manager* that maintains a *listening socket* on port 27015 by default).
+
+This means that, initially, the "*link*" to a player connected to the server from the point of view of any of its services (think matchmaking queue, chat channels...) would exist solely through the channel object created upon their connection. This was problematic, because internet connections to "random" users are by nature unstable and you can sometimes get scenarios where you don't necessarily want a player to be fully "unloaded" from the server if they reconnect 10 seconds after disconnecting. You also might simply want to create and manage *session data* until the player has disconnected for at least a certain amount of time.
+
+To solve this problem, there was a need for a layer of "insulation" from the unstability of *Communication Channels*. It is provided by the *ConnectedPlayersManager* whose role is to react to the server receiving a *Message* of *Type/Header* "Authentification", which as of now only contains a player's name. The manager works with these messages to manage a set of *ConnectedPlayer* objects by creating & discarding them (while giving notice to other services), and update the *Channel* they are linked to.
+
+Other server services can thus completely ignore the dynamics of *Communication Channels* and instead use the *ConnectedPlayers* objects through events fired by the *ConnectedPlayersManager*. Through the *ConnectedPlayer* objects, the services can send & receive messages, and react to "proper" connections and disconnections AND "channel" disconnection events separately. 
 
 ### Matchmaking & MatchesManager
 
+The *MatchmakingManager* and *MatchesManager* together manage the online gameplay experience of connected players. They both make use of the *ConnectedPlayer* objects, the former to register to receiving a request to start or stop *matchmaking* (which simply puts the *ConnectedPlayer* inside a list of players who want to play), and send a notice when a match was found. The latter uses it to properly create *ServerMatch* structures (which are wrappers for a *Match* object with associated *ConnectedPlayers*) and set up the message sending (which, because it was developped before the *ConnectedPlayer* system, does not make use of it but rather uses channels directly for now) in order to broadcast *Data Change Events* and more.
+
+The *MatchesManager* generates the *Match Start Data* of every *Match* and sends it to participating players. Once created all the *ServerMatch* structures (within which the *Match* objects exist) stay in a list and get updated by the server. For now they only end when one of the associated *ConnectedPlayers* disconnects.
+
 ### Chat
 
+The only other service the server currently provides is a simple chat box system. It also works with the *ConnectedPlayer* system.
+
+Very simply, it keeps track of *ConnectedPlayer* sending messages requesting to join / leave chat, and send a chat message. All *ConnectedPlayers* that are currently considered to be in chat get every chat message broadcast to them so they may display it in the appropriate chat box on the client side.
+
+It probably won't stay this way, as it was made quickly to provide some communication system for players connected to the server.
+
+**And that's it for the code base ! It took a much longer time than expected providing a relatively exhaustive view of what we've accomplished in around 150 hours. To date this is very likely the most complex solution I've ever built. This means that whenever I stop being proud of it, I will have reached the next step in becoming a better developer. How exciting...**
+
 ## Will I continue this project ? What would I do better if starting from scratch ?
+
+Before ending this document I wanted to write about the future of this project, or rather why I won't keep working on this code base.
+
+This was entirely developped on stream and uploaded to Youtube. This means that this project only continued so long as I felt like it made for good content - which I eventually decided it didn't (I wouldn't recommend going for long winded projects as Twitch content as the more you advance the less welcoming it is to newcomers).
+
+Beyond that, I think this project has already made me learn many new things and make me fiddle with nearly every aspects of game development a Unity Developer might have to fiddle with (with a few exceptions like advanced animating, shader development and net security). So stopping now, I still feel like this project was far from being a waste of time even when taken outside the context of streaming it.
+
+Finally, even so early in development I already feel like I made a few mistakes that would justify starting from scratch if I ever wanted another go at making an online RTS framework :
+
+-> The "Framework" nature of the code didn't become apparent right away : I originally set out to make a *game* and ended up making a *framework* first because of my rule to not use third party libraries. However, the two natures of the code I was writing conflicted, and now the "*framework*" I've produced isn't actually very usable as a framework, as you need to tangle with the actual *Commons* to change even very basic things, whereas a good framework in C# should be fully usable without changing its core code. For example, starting again, I would make sure to be able to add *Workers* and *Data Components* seamlessly from outside the *Commons* assembly. 
+
+-> Because, in part, of my own ignorance of what C# can do (IE I didn't know about the BinaryWriter/Reader objects) and my awakening to C++ happening in parallel, there is a lot of *pointer code* (or *unsafe* code as it's called in C#), sometimes for reasons of performance, other times for encoding / decoding messages. In the meantime, I learned to write C++ native dlls and starting again I would probably write the bulk of the *Commons* as a C++ native library (especially performance critical code like the *Match Code*), with the C# part being a wrapper for usability by users of the framework.
+
+-> Finally, simply put : there was a complete lack of a longer term plan. No *Trello* or *Hack'n plan* board, no commit discipline... This means that a lot of time was spent working on frankly non important features and wondering what exactly to do next. I would also have liked to present the project over time in a more accessible way than hours long VODs on Youtube.
+
+Thanks for reading ! I will continue streamed development here and there on my Twitch channel (https://www.twitch.tv/Hoshiqua), with "one-off" series where I try to "solve" a certain problem on much smaller projects that get worked on for only a handful of streams.
