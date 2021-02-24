@@ -10,6 +10,8 @@ Development was entirely streamed on my Twitch channel : https://www.twitch.tv/H
 
 Because of my break in streaming, and because I'd probably start again from scratch anyway, development of this framework is suspended.
 
+If you want a breakdown of the codebase, check out the [Wiki](https://github.com/MarcJacob/Project-NeoRTS/wiki/).
+
 ## Will I continue this project? What would I do better if starting from scratch?
 
 Before ending this document, I wanted to write about the future of this project, or rather why I won't keep working on this code base.
