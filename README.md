@@ -8,7 +8,7 @@ Note that the game isn't in a playable state : all present interactive elements 
 Development was entirely streamed on my Twitch channel : https://www.twitch.tv/Hoshiqua
 ... and entirely uploaded to my Youtube channel : https://www.youtube.com/channel/UCvdyDp5GVFhEls_3hy7M38A
 
-Because of changes to my stream schedule and format, development is for now suspended. Video presentation of the current codebase coming soon.
+Because of my break in streaming, and because I'd probably start again from scratch anyway, development of this framework is suspended.
 
 
 ## Understanding the code base (Pt 1 : "Application" projects)
