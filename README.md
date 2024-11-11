@@ -2,7 +2,7 @@
 
 ## Streamed Online RTS Project.
 
-### Link to current Client build : https://drive.google.com/file/d/14_UJcRmgkqBtBGLjMqTX6O8486oE9Dlb/view?usp=sharing
+### Link to current Client build : \<Defunct\>
 
 Note that the game isn't in a playable state : all present interactive elements are built as a test, using the Framework beneath as a service of sorts. 
 Development was entirely streamed on my Twitch channel : https://www.twitch.tv/Hoshiqua
